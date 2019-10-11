@@ -113,7 +113,7 @@ class SimDialCorpus(object):
                 sample = {}
                 for usr_key in norm_meta.usr_id2slot:
                     sample[usr_key] = np.random.choice(usr_slots[usr_key])
-                sample_ret = np.random.choice(norm_meta.sys_id2slot)
+                sample_ret = np.random.choice(list(norm_meta.sys_id2slot))
                 search_str = self._dict_to_str("QUERY", sample, norm_meta.usr_id2slot)
                 search_str += " RET {}".format(sample_ret)
                 search_tkns = [BOS, SYS] + self.tokenize(search_str) + [EOS]
@@ -149,7 +149,8 @@ class SimDialCorpus(object):
                                                       utt=template_utt))
                     elif type(utts) is dict:
                         # we cap to at most 10 YN questions
-                        for expect_answer, qs in utts.items()[0:5]:
+                        print(utts.items())
+                        for expect_answer, qs in list(utts.items())[0:5]:
                             for q in qs:
                                 template_utt = [BOS, USR, expect_answer] + self.tokenize(q) + [EOS]
                                 slot_meta.append(Pack(slot=slot, intent=intent, is_usr=is_usr,
@@ -269,7 +270,7 @@ class SimDialCorpus(object):
                     str_paras.append(v)
                 elif k:
                     str_paras.append(k)
-        str_paras = map(str, str_paras)
+        str_paras = list(map(str, str_paras))
         return [intent] + str_paras
 
     def _to_id_corpus(self, name, data, use_black_list):
@@ -409,7 +410,7 @@ class SimDialCorpus(object):
         id_domain_meta['sys_id'] = self.rev_vocab[SYS]
         id_domain_meta['usr_id'] = self.rev_vocab[USR]
         for domain, meta in self.domain_meta.items():
-            description = [domain, SEP] + meta.usr_id2slot + [SEP] + meta.sys_id2slot
+            description = [domain, SEP] + list(meta.usr_id2slot) + [SEP] + list(meta.sys_id2slot)
             description = [self.rev_vocab[t] for t in description]
             templates, acts = [], []
             templates.append([self.rev_vocab[t] for t in meta.greet])
@@ -422,7 +423,7 @@ class SimDialCorpus(object):
                     if s == '#QUERY':
                         s_id = 0
                     else:
-                        s_id = meta.usr_id2slot.index(s) if example.is_usr else meta.sys_id2slot.index(s)
+                        s_id = list(meta.usr_id2slot).index(s) if example.is_usr else list(meta.sys_id2slot).index(s)
                     type = INF if example.is_usr else REQ
                     acts.append([self.rev_vocab[t] for t in [type, str(s_id), example.intent, example.slot]])
                     templates.append([self.rev_vocab[t] for t in example.utt])
@@ -439,7 +440,7 @@ class SimDialCorpus(object):
             return []
 
         # estimate how many dialogs we need.
-        dialog_cnt = utt_cnt/10
+        dialog_cnt = utt_cnt//10
 
         # find all domains IDs
         id2domains = defaultdict(list)

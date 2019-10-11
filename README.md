@@ -18,8 +18,8 @@ If you use any source codes or datasets included in this toolkit in your work, p
     }
 
 ## Requirements
-    python 2.7
-    pytorch >= 0.3.0.post4
+    python 3.6
+    pytorch >= 1.3
     numpy
     nltk
     

@@ -51,7 +51,7 @@ class LossManager(object):
     def add_loss(self, loss):
         for key, val in loss.items():
             if val is not None and type(val) is not bool:
-                self.losses[key].append(val.data[0])
+                self.losses[key].append(val.item())
 
     def add_backward_loss(self, loss):
         self.backward_losses.append(loss.data[0])

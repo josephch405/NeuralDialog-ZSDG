@@ -153,7 +153,7 @@ class TurnEvaluator(EvaluatorBase):
         train_x = representation.transform(train_utts)
         test_x = representation.transform(test_utts)
 
-        clf = OneVsRestClassifier(SGDClassifier(loss='hinge', n_iter=10)).fit(train_x, train_y)
+        clf = OneVsRestClassifier(SGDClassifier(loss='hinge', n_iter_no_change=10)).fit(train_x, train_y)
         pred_test_y = clf.predict(test_x)
 
         def print_report(score_name, scores, names):
@@ -164,7 +164,7 @@ class TurnEvaluator(EvaluatorBase):
                      tag_set)
 
         x = representation.transform(utts)
-        clf = OneVsRestClassifier(SGDClassifier(loss='hinge', n_iter=20)) \
+        clf = OneVsRestClassifier(SGDClassifier(loss='hinge', n_iter_no_change=20)) \
             .fit(x, sparse_y)
 
         model_dump = {self.CLF: clf, self.REPRESENTATION: representation,

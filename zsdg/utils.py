@@ -46,8 +46,7 @@ class Pack(dict):
         utt = pack['utt']
         if 'QUERY' in utt or "RET" in utt:
             utt = str(utt)
-            utt = utt.translate(None, ''.join([':', '"', "{", "}", "]", "["]))
-            utt = unicode(utt)
+            utt = utt.translate(str.maketrans('', '', ''.join([':', '"', "{", "}", "]", "["])))
         if include_domain:
             pack['utt'] = [bos_id, pack['speaker'], pack['domain']] + tokenize(utt) + [eos_id]
         else:
@@ -101,7 +100,7 @@ def prepare_dirs_loggers(config, script=""):
 
     # save config
     param_path = os.path.join(config.session_dir, "params.json")
-    with open(param_path, 'wb') as fp:
+    with open(param_path, 'w') as fp:
         json.dump(config.__dict__, fp, indent=4, sort_keys=True)
 
 

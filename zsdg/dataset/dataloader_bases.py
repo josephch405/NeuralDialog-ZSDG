@@ -152,8 +152,8 @@ class LongDataLoader(object):
             temp_end = range(2, actual_size, config.step_size)
             temp_start = [0] * len(temp_end)
 
-            cut_start = temp_start + cut_start
-            cut_end = temp_end + cut_end
+            cut_start = temp_start + list(cut_start)
+            cut_end = list(temp_end) + list(cut_end)
 
             assert len(cut_end) == len(cut_start)
             new_grids = [(idx, s_id, e_id) for s_id, e_id in

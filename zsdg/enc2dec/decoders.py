@@ -88,7 +88,7 @@ class Attention(nn.Module):
             mapped_out = self.dec_w(output)
             tiled_out = mapped_out.unsqueeze(2).repeat(1, 1, input_size, 1)
             tiled_attn = mapped_attn.unsqueeze(1)
-            fc1 = F.tanh(tiled_attn+tiled_out)
+            fc1 = torch.tanh(tiled_attn+tiled_out)
             attn = self.query_w(fc1).squeeze(-1)
 
         else:
@@ -109,7 +109,7 @@ class Attention(nn.Module):
             return combined, attn
         else:
             # output -> (batch, out_len, dim)
-            output = F.tanh(
+            output = torch.tanh(
                 self.linear_out(combined.view(-1, self.dec_size+self.attn_size))).view(
                 batch_size, -1, self.dec_size)
             return output, attn

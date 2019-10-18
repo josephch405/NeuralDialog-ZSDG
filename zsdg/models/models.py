@@ -27,12 +27,14 @@ class PtrBase(BaseModel):
             label_mask = labels.view(-1, 1) == self.rev_vocab[PAD]
             label_ptr = flat_ptr.gather(1, labels.view(-1, 1))
             not_in_ctx = label_ptr == 0
-            mix_ptr = torch.cat([label_ptr, g.view(-1, 1)], dim=1).gather(1, not_in_ctx.long())
+            mix_ptr = torch.cat([label_ptr, g.view(-1, 1)],
+                                dim=1).gather(1, not_in_ctx.long())
             # mix_ptr = g.view(-1, 1) + label_ptr
             attention_loss = -1.0 * torch.log(mix_ptr.clamp(min=1e-10))
             attention_loss.masked_fill_(label_mask, 0)
 
-            valid_cnt = (label_mask.size(0) - torch.sum(label_mask).float()).clamp(min=1e-10)
+            valid_cnt = (label_mask.size(0) -
+                         torch.sum(label_mask).float()).clamp(min=1e-10)
             avg_attn_loss = torch.sum(attention_loss) / valid_cnt
         else:
             avg_attn_loss = None
@@ -76,7 +78,6 @@ class HRED(BaseModel):
         else:
             self.connector = IdentityConnector()
 
-
         self.decoder = DecoderRNN(self.vocab_size, config.max_dec_len,
                                   config.embed_size, config.dec_cell_size,
                                   self.go_id, self.eos_id,
@@ -89,7 +90,6 @@ class HRED(BaseModel):
                                   use_gpu=config.use_gpu)
         self.nll = criterions.NLLEntropy(self.pad_id, config)
 
-
     def forward(self, data_feed, mode, gen_type='greedy', return_latent=False):
         """         
         B: batch_size, D: context_size U: utt_size, X: response_size
@@ -99,7 +99,7 @@ class HRED(BaseModel):
         4. ctx_floors: B x D
         5. out_lens: B x 1
         6. out_utts: B x X
-        
+
         :param data_feed: 
         {'ctx_lens': vec_ctx_lens, 'ctx_utts': vec_ctx_utts,
          'ctx_confs': vec_ctx_confs, 'ctx_floors': vec_ctx_floors,
@@ -225,7 +225,8 @@ class PtrHRED(PtrBase):
         out_utts = self.np2var(data_feed['outputs'], LONG)
         batch_size = len(ctx_lens)
 
-        utt_embedded, utt_outs, _, _ = self.utt_encoder(ctx_utts, ctx_confs, return_all=True)
+        utt_embedded, utt_outs, _, _ = self.utt_encoder(
+            ctx_utts, ctx_confs, return_all=True)
 
         ctx_outs, ctx_last = self.ctx_encoder(utt_embedded, ctx_lens)
 
@@ -237,8 +238,10 @@ class PtrHRED(PtrBase):
         dec_init_state = self.connector(ctx_last)
 
         # attention
-        ctx_outs = ctx_outs.unsqueeze(2).repeat(1, 1, ctx_utts.size(2), 1).view(batch_size, -1, self.ctx_encoder.output_size)
-        utt_outs = utt_outs.contiguous().view(batch_size, -1, self.utt_encoder.output_size)
+        ctx_outs = ctx_outs.unsqueeze(2).repeat(1, 1, ctx_utts.size(
+            2), 1).view(batch_size, -1, self.ctx_encoder.output_size)
+        utt_outs = utt_outs.contiguous().view(
+            batch_size, -1, self.utt_encoder.output_size)
         attn_inputs = ctx_outs + utt_outs
         flat_ctx_words = ctx_utts.view(batch_size, -1)
 
@@ -267,7 +270,8 @@ class ZeroShotHRED(PtrBase):
         self.pad_id = self.rev_vocab[PAD]
 
         # build model here
-        self.embedding = nn.Embedding(self.vocab_size, config.embed_size, padding_idx=self.pad_id)
+        self.embedding = nn.Embedding(
+            self.vocab_size, config.embed_size, padding_idx=self.pad_id)
 
         self.utt_encoder = RnnUttEncoder(config.utt_cell_size, config.dropout,
                                          use_attn=config.utt_type == 'rnn_attn',
@@ -283,9 +287,8 @@ class ZeroShotHRED(PtrBase):
                                       variable_lengths=False,
                                       bidirection=config.bi_ctx_cell)
 
-
         self.policy = nn_lib.Hidden2Feat(self.ctx_encoder.output_size, config.dec_cell_size,
-                                         is_lstm=config.rnn_cell=='lstm')
+                                         is_lstm=config.rnn_cell == 'lstm')
         self.utt_policy = lambda x: x
 
         self.connector = nn_lib.LinearConnector(config.dec_cell_size, config.dec_cell_size,
@@ -342,29 +345,36 @@ class ZeroShotHRED(PtrBase):
         out_confs = self.np2var(np.ones((batch_size, 1)), FLOAT)
 
         # forward pass
-        out_embedded, out_outs, _, _ = self.utt_encoder(out_utts.unsqueeze(1), out_confs, return_all=True)
+        out_embedded, out_outs, _, _ = self.utt_encoder(
+            out_utts.unsqueeze(1), out_confs, return_all=True)
         out_embedded = self.utt_policy(out_embedded.squeeze(1))
 
         if ctx_lens is None:
-            act_embedded, act_outs, _, _ = self.utt_encoder(out_acts.unsqueeze(1), out_confs, return_all=True)
+            act_embedded, act_outs, _, _ = self.utt_encoder(
+                out_acts.unsqueeze(1), out_confs, return_all=True)
             act_embedded = act_embedded.squeeze(1)
 
             # create attention contexts
-            attn_inputs = act_outs.contiguous().view(batch_size, -1, self.utt_encoder.output_size)
+            attn_inputs = act_outs.contiguous().view(
+                batch_size, -1, self.utt_encoder.output_size)
             attn_words = out_acts.view(batch_size, -1)
             latent_action = self.utt_policy(act_embedded)
         else:
-            utt_embedded, utt_outs, _, _ = self.utt_encoder(ctx_utts, ctx_confs, return_all=True)
+            utt_embedded, utt_outs, _, _ = self.utt_encoder(
+                ctx_utts, ctx_confs, return_all=True)
             ctx_outs, ctx_last = self.ctx_encoder(utt_embedded, ctx_lens)
 
             # create decoder initial states
             latent_action = self.policy(ctx_last)
 
             # create attention contexts
-            ctx_outs = ctx_outs.unsqueeze(2).repeat(1, 1, ctx_utts.size(2), 1).view(batch_size, -1, self.ctx_encoder.output_size)
-            utt_outs = utt_outs.contiguous().view(batch_size, -1, self.utt_encoder.output_size)
+            ctx_outs = ctx_outs.unsqueeze(2).repeat(1, 1, ctx_utts.size(
+                2), 1).view(batch_size, -1, self.ctx_encoder.output_size)
+            utt_outs = utt_outs.contiguous().view(
+                batch_size, -1, self.utt_encoder.output_size)
             attn_inputs = ctx_outs + utt_outs  # batch_size x num_word x attn_size
-            attn_words = ctx_utts.view(batch_size, -1)  # batch_size x num_words
+            # batch_size x num_words
+            attn_words = ctx_utts.view(batch_size, -1)
 
         dec_init_state = self.connector(latent_action)
 
@@ -389,7 +399,7 @@ class ZeroShotHRED(PtrBase):
             if return_latent:
                 loss_pack['latent_actions'] = latent_action
 
-            loss_pack['distance'] = self.l2_loss(out_embedded,latent_action)
+            loss_pack['distance'] = self.l2_loss(out_embedded, latent_action)
             return loss_pack
 
 
@@ -405,7 +415,8 @@ class ZeroShotPtrHRED(PtrBase):
         self.pad_id = self.rev_vocab[PAD]
 
         # build model here
-        self.embedding = nn.Embedding(self.vocab_size, config.embed_size, padding_idx=self.pad_id)
+        self.embedding = nn.Embedding(
+            self.vocab_size, config.embed_size, padding_idx=self.pad_id)
 
         self.utt_encoder = RnnUttEncoder(config.utt_cell_size, config.dropout,
                                          use_attn=config.utt_type == 'rnn_attn',
@@ -421,7 +432,8 @@ class ZeroShotPtrHRED(PtrBase):
                                       variable_lengths=False,
                                       bidirection=config.bi_ctx_cell)
 
-        self.policy = nn.Linear(self.ctx_encoder.output_size, config.dec_cell_size)
+        self.policy = nn.Linear(
+            self.ctx_encoder.output_size, config.dec_cell_size)
         self.utt_policy = lambda x: x
 
         self.connector = nn_lib.LinearConnector(config.dec_cell_size, config.dec_cell_size,
@@ -459,19 +471,23 @@ class ZeroShotPtrHRED(PtrBase):
         batch_size = len(data_feed['outputs'])
         out_confs = self.np2var(np.ones((batch_size, 1)), FLOAT)
 
-        out_embedded, out_outs, _, _ = self.utt_encoder(out_utts.unsqueeze(1), out_confs, return_all=True)
+        out_embedded, out_outs, _, _ = self.utt_encoder(
+            out_utts.unsqueeze(1), out_confs, return_all=True)
         out_embedded = self.utt_policy(out_embedded.squeeze(1))
 
         if ctx_lens is None:
-            act_embedded, act_outs, _, _ = self.utt_encoder(out_acts.unsqueeze(1), out_confs, return_all=True)
+            act_embedded, act_outs, _, _ = self.utt_encoder(
+                out_acts.unsqueeze(1), out_confs, return_all=True)
             act_embedded = act_embedded.squeeze(1)
 
             # create attention contexts
-            attn_inputs = act_outs.contiguous().view(batch_size, -1, self.utt_encoder.output_size)
+            attn_inputs = act_outs.contiguous().view(
+                batch_size, -1, self.utt_encoder.output_size)
             attn_words = out_acts.view(batch_size, -1)
             latent_action = self.utt_policy(act_embedded)
         else:
-            utt_embedded, utt_outs, _, _ = self.utt_encoder(ctx_utts, ctx_confs, return_all=True)
+            utt_embedded, utt_outs, _, _ = self.utt_encoder(
+                ctx_utts, ctx_confs, return_all=True)
             ctx_outs, ctx_last = self.ctx_encoder(utt_embedded, ctx_lens)
             pi_inputs = self._gather_last_out(ctx_outs, ctx_lens)
 
@@ -479,10 +495,13 @@ class ZeroShotPtrHRED(PtrBase):
             latent_action = self.policy(pi_inputs)
 
             # create attention contexts
-            ctx_outs = ctx_outs.unsqueeze(2).repeat(1, 1, ctx_utts.size(2), 1).view(batch_size, -1, self.ctx_encoder.output_size)
-            utt_outs = utt_outs.contiguous().view(batch_size, -1, self.utt_encoder.output_size)
+            ctx_outs = ctx_outs.unsqueeze(2).repeat(1, 1, ctx_utts.size(
+                2), 1).view(batch_size, -1, self.ctx_encoder.output_size)
+            utt_outs = utt_outs.contiguous().view(
+                batch_size, -1, self.utt_encoder.output_size)
             attn_inputs = ctx_outs + utt_outs  # batch_size x num_word x attn_size
-            attn_words = ctx_utts.view(batch_size, -1)  # batch_size x num_words
+            # batch_size x num_words
+            attn_words = ctx_utts.view(batch_size, -1)
 
         dec_init_state = self.connector(latent_action)
 

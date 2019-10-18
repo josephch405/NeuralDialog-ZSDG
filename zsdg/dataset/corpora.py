@@ -149,7 +149,6 @@ class SimDialCorpus(object):
                                                       utt=template_utt))
                     elif type(utts) is dict:
                         # we cap to at most 10 YN questions
-                        print(utts.items())
                         for expect_answer, qs in list(utts.items())[0:5]:
                             for q in qs:
                                 template_utt = [BOS, USR, expect_answer] + self.tokenize(q) + [EOS]

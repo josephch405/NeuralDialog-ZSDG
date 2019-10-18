@@ -30,7 +30,8 @@ def get_config():
 
 # Data
 data_arg = add_argument_group('Data')
-data_arg.add_argument('--data_dir', type=str, nargs='+', default=['data/stanford'])
+data_arg.add_argument('--data_dir', type=str, nargs='+',
+                      default=['data/stanford'])
 data_arg.add_argument('--log_dir', type=str, default='logs')
 
 # Network
@@ -82,7 +83,8 @@ misc_arg.add_argument('--beam_size', type=int, default=20)
 # KEY PARAMETERS
 
 # decide which domains are excluded from the training
-train_arg.add_argument('--black_domains', type=str, nargs='*', default=['schedule'])
+train_arg.add_argument('--black_domains', type=str,
+                       nargs='*', default=['schedule'])
 train_arg.add_argument('--black_ratio', type=float, default=1.0)
 train_arg.add_argument('--target_example_cnt', type=int, default=150)
 
@@ -102,13 +104,14 @@ def main(config):
     warmup_data = corpus_client.get_seed_responses(config.target_example_cnt)
     dial_corpus = corpus_client.get_corpus()
     train_dial, valid_dial, test_dial = dial_corpus['train'],\
-                                        dial_corpus['valid'],\
-                                        dial_corpus['test']
+        dial_corpus['valid'],\
+        dial_corpus['test']
 
     evaluator = evaluators.BleuEntEvaluator("SMD", corpus_client.ent_metas)
 
     # create data loader that feed the deep models
-    train_feed = data_loaders.ZslSMDDialDataLoader("Train", train_dial, config, warmup_data)
+    train_feed = data_loaders.ZslSMDDialDataLoader(
+        "Train", train_dial, config, warmup_data)
     valid_feed = data_loaders.ZslSMDDialDataLoader("Valid", valid_dial, config)
     test_feed = data_loaders.ZslSMDDialDataLoader("Test", test_dial, config)
     if config.action_match:
@@ -125,7 +128,7 @@ def main(config):
     if config.forward_only:
         session_dir = os.path.join(config.log_dir, config.load_sess)
         test_file = os.path.join(session_dir, "{}-test-{}.txt".format(get_time(),
-                                                         config.gen_type))
+                                                                      config.gen_type))
         model_file = os.path.join(config.log_dir, config.load_sess, "model")
     else:
         session_dir = config.session_dir
@@ -139,7 +142,8 @@ def main(config):
     if config.forward_only is False:
 
         try:
-            train(model, train_feed, valid_feed, test_feed, config, evaluator, gen=hred_utils.generate)
+            train(model, train_feed, valid_feed, test_feed,
+                  config, evaluator, gen=hred_utils.generate)
         except KeyboardInterrupt:
             print("Training stopped by keyboard.")
 
@@ -151,8 +155,9 @@ def main(config):
     # run the model on the test dataset.
     validate(model, test_feed, config)
 
-    with open(os.path.join(test_file), "wb") as f:
-        hred_utils.generate(model, test_feed, config, evaluator, num_batch=None, dest_f=f)
+    with open(os.path.join(test_file), "w") as f:
+        hred_utils.generate(model, test_feed, config,
+                            evaluator, num_batch=None, dest_f=f)
 
 
 if __name__ == "__main__":

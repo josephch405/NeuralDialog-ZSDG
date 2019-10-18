@@ -96,7 +96,8 @@ class TurnEvaluator(EvaluatorBase):
 
         dekenize = get_dekenize()
         utt2act = {dekenize(k.split()): v for k, v in utt2act.items()}
-        self.logger.info("Compress utt2act from {}->{}".format(len(turn_corpus), len(utt2act)))
+        self.logger.info(
+            "Compress utt2act from {}->{}".format(len(turn_corpus), len(utt2act)))
 
         # get entity value vocabulary
         domain_id2ent = defaultdict(set)
@@ -153,7 +154,8 @@ class TurnEvaluator(EvaluatorBase):
         train_x = representation.transform(train_utts)
         test_x = representation.transform(test_utts)
 
-        clf = OneVsRestClassifier(SGDClassifier(loss='hinge', n_iter_no_change=10)).fit(train_x, train_y)
+        clf = OneVsRestClassifier(SGDClassifier(
+            loss='hinge', n_iter_no_change=10)).fit(train_x, train_y)
         pred_test_y = clf.predict(test_x)
 
         def print_report(score_name, scores, names):
@@ -170,7 +172,7 @@ class TurnEvaluator(EvaluatorBase):
         model_dump = {self.CLF: clf, self.REPRESENTATION: representation,
                       self.ID2TAG: tag_set,
                       self.TAG2ID: rev_tag_set}
-        # pkl.dump(model_dump, open("{}.pkl".format(self.data_name), "wb"))
+        # pkl.dump(model_dump, open("{}.pkl".format(self.data_name), "w"))
         return model_dump
 
     def pred_ents(self, sentence, tokenize, domain):
@@ -178,7 +180,7 @@ class TurnEvaluator(EvaluatorBase):
         padded_hyp = "/{}/".format("/".join(tokenize(sentence)))
         for e in self.domain_id2ent[domain]:
             count = padded_hyp.count("/{}/".format(e))
-            if domain =='movie' and e == 'I':
+            if domain == 'movie' and e == 'I':
                 continue
             pred_ents.extend([e] * count)
         return pred_ents
@@ -198,6 +200,7 @@ class TurnEvaluator(EvaluatorBase):
     """
     Public Functions
     """
+
     def initialize(self):
         self.domain_labels = defaultdict(list)
         self.domain_hyps = defaultdict(list)
@@ -215,7 +218,8 @@ class TurnEvaluator(EvaluatorBase):
             intent2hyps = defaultdict(list)
 
             predictions = self.domain_hyps[domain]
-            self.logger.info("Generate report for {} for {} samples".format(domain, len(predictions)))
+            self.logger.info("Generate report for {} for {} samples".format(
+                domain, len(predictions)))
 
             # find entity precision, recall and f1
             tp, fp, fn = 0.0, 0.0, 0.0
@@ -267,10 +271,14 @@ class TurnEvaluator(EvaluatorBase):
                     fn += ffnn
 
             # compute corpus level scores
-            bleu = bleu_score.corpus_bleu(refs, hyps, smoothing_function=SmoothingFunction().method1)
-            ent_precision, ent_recall, ent_f1 = self._get_prec_recall(tp, fp, fn)
-            int_precision, int_recall, int_f1 = self._get_prec_recall(itp, ifp, ifn)
-            back_precision, back_recall, back_f1 = self._get_prec_recall(btp, bfp, bfn)
+            bleu = bleu_score.corpus_bleu(
+                refs, hyps, smoothing_function=SmoothingFunction().method1)
+            ent_precision, ent_recall, ent_f1 = self._get_prec_recall(
+                tp, fp, fn)
+            int_precision, int_recall, int_f1 = self._get_prec_recall(
+                itp, ifp, ifn)
+            back_precision, back_recall, back_f1 = self._get_prec_recall(
+                btp, bfp, bfn)
 
             # compute BLEU w.r.t intents
             intent_report = []
@@ -362,7 +370,8 @@ class BleuEntEvaluator(EvaluatorBase):
 
         for domain, labels in self.domain_labels.items():
             predictions = self.domain_hyps[domain]
-            self.logger.info("Generate report for {} for {} samples".format(domain, len(predictions)))
+            self.logger.info("Generate report for {} for {} samples".format(
+                domain, len(predictions)))
             refs, hyps = [], []
 
             # find entity precision, recall and f1
@@ -386,13 +395,14 @@ class BleuEntEvaluator(EvaluatorBase):
                 fp += ffpp
                 fn += ffnn
 
-            ent_precision, ent_recall, ent_f1 = self._get_prec_recall(tp, fp, fn)
+            ent_precision, ent_recall, ent_f1 = self._get_prec_recall(
+                tp, fp, fn)
 
             # compute corpus level scores
-            bleu = bleu_score.corpus_bleu(refs, hyps, smoothing_function=SmoothingFunction().method1)
+            bleu = bleu_score.corpus_bleu(
+                refs, hyps, smoothing_function=SmoothingFunction().method1)
             report = "\nDomain: %s BLEU %f\n Entity precision %f recall %f and f1 %f\n" \
                      % (domain, bleu, ent_precision, ent_recall, ent_f1)
             reports.append(report)
 
         return "\n==== REPORT===={report}".format(report="========".join(reports))
-

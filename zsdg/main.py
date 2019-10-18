@@ -54,7 +54,7 @@ class LossManager(object):
                 self.losses[key].append(val.item())
 
     def add_backward_loss(self, loss):
-        self.backward_losses.append(loss.data[0])
+        self.backward_losses.append(loss.item())
 
     def clear(self):
         self.losses = defaultdict(list)
@@ -65,7 +65,8 @@ class LossManager(object):
         for key, loss in self.losses.items():
             if loss is None:
                 continue
-            avg_loss = np.average(loss) if window is None else np.average(loss[-window:])
+            avg_loss = np.average(
+                loss) if window is None else np.average(loss[-window:])
             str_losses.append("{} {:.3f}".format(key, avg_loss))
             if 'nll' in key:
                 str_losses.append("PPL {:.3f}".format(np.exp(avg_loss)))
@@ -95,7 +96,7 @@ def train(model, train_feed, valid_feed, test_feed, config, evaluator, gen=None)
     logger.info("**** Epoch 0/{} ****".format(config.max_epoch))
 
     while True:
-        train_feed.epoch_init(config, verbose=done_epoch==0, shuffle=True)
+        train_feed.epoch_init(config, verbose=done_epoch == 0, shuffle=True)
         while True:
             batch = train_feed.next_batch()
             if batch is None:
@@ -117,8 +118,8 @@ def train(model, train_feed, valid_feed, test_feed, config, evaluator, gen=None)
             if batch_cnt % config.print_step == 0:
                 logger.info(train_loss.pprint("Train", window=config.print_step,
                                               prefix="{}/{}-({:.3f})".format(batch_cnt % config.ckpt_step,
-                                                                         config.ckpt_step,
-                                                                         model.kl_w)))
+                                                                             config.ckpt_step,
+                                                                             model.kl_w)))
 
             if batch_cnt % config.ckpt_step == 0:
                 logger.info("\n=== Evaluating Model ===")
@@ -126,10 +127,11 @@ def train(model, train_feed, valid_feed, test_feed, config, evaluator, gen=None)
                 done_epoch += 1
 
                 # validation
-                valid_loss = validate(model,valid_feed, config, batch_cnt)
+                valid_loss = validate(model, valid_feed, config, batch_cnt)
 
                 # generating
-                gen(model, test_feed, config, evaluator, num_batch=config.preview_batch_num)
+                gen(model, test_feed, config, evaluator,
+                    num_batch=config.preview_batch_num)
 
                 # update early stopping stats
                 if valid_loss < best_valid_loss:
@@ -149,7 +151,8 @@ def train(model, train_feed, valid_feed, test_feed, config, evaluator, gen=None)
                 if done_epoch >= config.max_epoch \
                         or config.early_stop and patience <= done_epoch:
                     if done_epoch < config.max_epoch:
-                        logger.info("!!Early stop due to run out of patience!!")
+                        logger.info(
+                            "!!Early stop due to run out of patience!!")
 
                     logger.info("Best validation loss %f" % best_valid_loss)
 
@@ -159,7 +162,7 @@ def train(model, train_feed, valid_feed, test_feed, config, evaluator, gen=None)
                 model.train()
                 train_loss.clear()
                 logger.info("\n**** Epcoch {}/{} ****".format(done_epoch,
-                                                       config.max_epoch))
+                                                              config.max_epoch))
 
 
 def validate(model, valid_feed, config, batch_cnt=None):
@@ -209,12 +212,15 @@ def generate(model, data_feed, config, evaluator, num_batch=1, dest_f=None):
         labels = labels.cpu()
         pred_labels = [t.cpu().data.numpy() for t in
                        outputs[DecoderRNN.KEY_SEQUENCE]]
-        pred_labels = np.array(pred_labels, dtype=int).squeeze(-1).swapaxes(0,1)
+        pred_labels = np.array(
+            pred_labels, dtype=int).squeeze(-1).swapaxes(0, 1)
         true_labels = labels.data.numpy()
         # get attention if possible
         if config.use_attn or config.use_ptr:
-            pred_attns = [t.cpu().data.numpy() for t in outputs[DecoderRNN.KEY_ATTN_SCORE]]
-            pred_attns = np.array(pred_attns, dtype=float).squeeze(2).swapaxes(0,1)
+            pred_attns = [t.cpu().data.numpy()
+                          for t in outputs[DecoderRNN.KEY_ATTN_SCORE]]
+            pred_attns = np.array(
+                pred_attns, dtype=float).squeeze(2).swapaxes(0, 1)
         else:
             pred_attns = None
 
@@ -229,22 +235,23 @@ def generate(model, data_feed, config, evaluator, num_batch=1, dest_f=None):
 
         # logger.info the batch in String.
         for b_id in range(pred_labels.shape[0]):
-            pred_str, attn = get_sent(model, de_tknize, pred_labels, b_id, attn=pred_attns, attn_ctx=attn_ctx)
+            pred_str, attn = get_sent(
+                model, de_tknize, pred_labels, b_id, attn=pred_attns, attn_ctx=attn_ctx)
             true_str, _ = get_sent(model, de_tknize, true_labels, b_id)
             prev_ctx = ""
             if ctx is not None:
-                ctx_str, _ = get_sent(model, de_tknize, ctx[:, ctx_len[b_id]-1, :], b_id)
+                ctx_str, _ = get_sent(
+                    model, de_tknize, ctx[:, ctx_len[b_id]-1, :], b_id)
                 prev_ctx = "Source: {}".format(ctx_str)
 
             domain = domains[b_id]
             evaluator.add_example(true_str, pred_str, domain)
             if num_batch is None or num_batch <= 2:
                 write(prev_ctx)
-                write("{}:: True: {} ||| Pred: {}".format(domain, true_str, pred_str))
+                write("{}:: True: {} ||| Pred: {}".format(
+                    domain, true_str, pred_str))
                 if attn:
                     write("[[{}]]".format(attn))
 
     write(evaluator.get_report(include_error=dest_f is not None))
     logger.info("Generation Done")
-
-

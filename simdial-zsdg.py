@@ -95,7 +95,8 @@ misc_arg.add_argument('--beam_size', type=int, default=20)
 # KEY PARAMETERS
 
 # decide which domains are excluded from the training
-train_arg.add_argument('--black_domains', type=str, nargs='*', default=['movie', 'restaurant_style', 'rest_pitt'])
+train_arg.add_argument('--black_domains', type=str, nargs='*',
+                       default=['movie', 'restaurant_style', 'rest_pitt'])
 train_arg.add_argument('--black_ratio', type=float, default=1.0)
 train_arg.add_argument('--target_example_cnt', type=int, default=100)
 
@@ -113,16 +114,19 @@ def main(config):
 
     corpus_client = SimDialCorpus(config)
     domain_meta = corpus_client.get_domain_meta()
-    warmup_data = corpus_client.get_seed_responses(config.target_example_cnt, None)
+    warmup_data = corpus_client.get_seed_responses(
+        config.target_example_cnt, None)
     dial_corpus = corpus_client.get_dialog_corpus()
     train_dial, valid_dial, test_dial = dial_corpus['train'],\
-                                        dial_corpus['valid'],\
-                                        dial_corpus['test']
+        dial_corpus['valid'],\
+        dial_corpus['test']
 
-    evaluator = TurnEvaluator("EMPTY", corpus_client.get_turn_corpus(SYS), corpus_client.domain_meta)
+    evaluator = TurnEvaluator(
+        "EMPTY", corpus_client.get_turn_corpus(SYS), corpus_client.domain_meta)
 
     # create data loader that feed the deep models
-    train_feed = SimDialDataLoader("Train", train_dial, domain_meta, config, warmup_data)
+    train_feed = SimDialDataLoader(
+        "Train", train_dial, domain_meta, config, warmup_data)
     valid_feed = SimDialDataLoader("Valid", valid_dial, domain_meta, config)
     test_feed = SimDialDataLoader("Test", test_dial, domain_meta, config)
     if config.action_match:
@@ -139,7 +143,7 @@ def main(config):
     if config.forward_only:
         session_dir = os.path.join(config.log_dir, config.load_sess)
         test_file = os.path.join(session_dir, "{}-test-{}.txt".format(get_time(),
-                                                         config.gen_type))
+                                                                      config.gen_type))
         model_file = os.path.join(config.log_dir, config.load_sess, "model")
     else:
         session_dir = config.session_dir
@@ -153,7 +157,8 @@ def main(config):
     if config.forward_only is False:
 
         try:
-            train(model, train_feed, valid_feed, test_feed, config, evaluator, gen=hred_utils.generate)
+            train(model, train_feed, valid_feed, test_feed,
+                  config, evaluator, gen=hred_utils.generate)
         except KeyboardInterrupt:
             print("Training stopped by keyboard.")
 
@@ -164,8 +169,9 @@ def main(config):
     # run the model on the test dataset.
     validate(model, test_feed, config)
 
-    with open(os.path.join(test_file), "wb") as f:
-        hred_utils.generate(model, test_feed, config, evaluator, num_batch=None, dest_f=f)
+    with open(os.path.join(test_file), "w") as f:
+        hred_utils.generate(model, test_feed, config,
+                            evaluator, num_batch=None, dest_f=f)
 
 
 if __name__ == "__main__":
